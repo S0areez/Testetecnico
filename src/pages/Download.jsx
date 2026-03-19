@@ -33,25 +33,19 @@ const Download = () => {
   }, [id]);
 
   const handleDownload = async () => {
-    if (!photoData || !photoData.url_da_foto) return;
+    if (!photoData || !photoData.imageUrl) return;
     
     try {
-      // Fazer fetch da imagem para forçar o download direto em vez de abrir nova aba
-      const response = await fetch(photoData.url_da_foto);
-      const blob = await response.blob();
-      const blobUrl = window.URL.createObjectURL(blob);
-      
       const link = document.createElement('a');
-      link.href = blobUrl;
+      link.href = photoData.imageUrl;
       link.download = 'nexlab-suaphoto.jpg';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(blobUrl);
     } catch (err) {
       console.error("Erro no download:", err);
       // Fallback
-      window.open(photoData.url_da_foto, '_blank');
+      window.open(photoData.imageUrl, '_blank');
     }
   };
 
@@ -75,7 +69,7 @@ const Download = () => {
             
             <div className="w-full bg-black rounded-xl overflow-hidden shadow-inner mb-8">
               <img 
-                src={photoData.url_da_foto} 
+                src={photoData.imageUrl} 
                 alt="Sua foto da experiência NEX.lab" 
                 className="w-full h-auto object-contain"
               />

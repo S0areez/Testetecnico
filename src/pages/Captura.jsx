@@ -1,10 +1,8 @@
 import React, { useState, useRef, useCallback } from 'react';
 import Webcam from 'react-webcam';
 import { QRCodeSVG } from 'qrcode.react';
-import { v4 as uuidv4 } from 'uuid';
-import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { collection, addDoc } from "firebase/firestore";
-import { storage, db } from '../firebase';
+import { db } from '../firebase';
 
 // Assets
 import logoNexLab from '../assets/nexlab-logo.svg';
@@ -121,12 +119,12 @@ const Captura = () => {
           ctx.shadowBlur = 10;
           ctx.fillText('PHOTO OPP', canvas.width / 2, canvas.height - 100);
 
-          resolve(canvas.toDataURL('image/jpeg', 0.9));
+          resolve(canvas.toDataURL('image/jpeg', 0.7));
         };
         
         logoImg.onerror = () => {
            // Fallback se a logo falhar
-           resolve(canvas.toDataURL('image/jpeg', 0.9));
+           resolve(canvas.toDataURL('image/jpeg', 0.7));
         }
       };
     });
@@ -138,23 +136,15 @@ const Captura = () => {
       // 0. Gerar imagem composta (foto + moldura)
       const finalBase64Image = await createFinalImage(base64Image);
 
-      // 1. Upload para o Firebase Storage
-      const fileId = uuidv4();
-      const storageRef = ref(storage, `capturas/${fileId}.jpg`);
-      
-      await uploadString(storageRef, finalBase64Image, 'data_url');
-      const downloadUrl = await getDownloadURL(storageRef);
-      
-      setPhotoUrl(downloadUrl);
-
-      // 2. Salvar documento no Firestore
+      // 1. Salvar documento no Firestore (Base64 direto no imageUrl)
       const docRef = await addDoc(collection(db, "capturas"), {
-        url_da_foto: downloadUrl,
+        imageUrl: finalBase64Image,
         data_hora: new Date().toISOString(),
         ip_usuario: "192.168.0.1", // Mock IP
         tipo_usuario: "promotor"
       });
       
+      setPhotoUrl(finalBase64Image);
       setDocId(docRef.id);
 
       // 3. Voltar automaticamente para a tela inicial após 10 segundos

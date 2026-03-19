@@ -132,7 +132,7 @@ const Admin = () => {
                     <tr key={cap.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-3">
                         <img 
-                          src={cap.url_da_foto} 
+                          src={cap.imageUrl} 
                           alt="Miniatura" 
                           className="h-16 w-16 object-cover rounded cursor-pointer border border-gray-300 hover:opacity-80"
                           onClick={() => setSelectedPhoto(cap)}
@@ -177,7 +177,7 @@ const Admin = () => {
             {/* Lado Esquerdo: Foto Grande */}
             <div className="w-full md:w-3/5 bg-black flex items-center justify-center p-4">
               <img 
-                src={selectedPhoto.url_da_foto} 
+                src={selectedPhoto.imageUrl} 
                 alt="Captura ampliada" 
                 className="max-h-[70vh] object-contain rounded"
               />
@@ -192,7 +192,7 @@ const Admin = () => {
 
               <div className="bg-white p-4 border-4 border-gray-800 rounded-xl shadow-sm mb-8">
                 <QRCodeSVG 
-                  value={selectedPhoto.url_da_foto} 
+                  value={`${window.location.origin}/download/${selectedPhoto.id}`} 
                   size={220}
                   level={"H"}
                   includeMargin={true}
@@ -200,12 +200,11 @@ const Admin = () => {
               </div>
 
               <a 
-                href={selectedPhoto.url_da_foto} 
-                target="_blank" 
-                rel="noreferrer"
+                href={selectedPhoto.imageUrl} 
+                download={`captura-${selectedPhoto.id}.jpg`}
                 className="w-full py-3 bg-black hover:bg-gray-800 text-white font-bold rounded-lg text-center transition-colors"
               >
-                Abrir Link da Imagem
+                Abrir Imagem (Base64)
               </a>
             </div>
           </div>
