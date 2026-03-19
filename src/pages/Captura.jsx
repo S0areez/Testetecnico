@@ -24,6 +24,7 @@ const Captura = () => {
   const [capturedImage, setCapturedImage] = useState(null);
   const [photoUrl, setPhotoUrl] = useState(null);
   const [docId, setDocId] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
   
   const webcamRef = useRef(null);
   const audioRef = useRef(new Audio('/click-sound.mp3')); // Simulando áudio
@@ -54,8 +55,14 @@ const Captura = () => {
   };
 
   const capturePhoto = useCallback(() => {
-    // Tenta tocar o som de click (ignorando erro se o arquivo não existir fisicamente no momento)
-    audioRef.current.play().catch(e => console.log("Audio play prevented:", e));
+    // Tenta tocar o som de click de forma segura para não travar
+    try {
+      if (audioRef.current) {
+        audioRef.current.play().catch(e => console.log("Audio play prevented or file not found:", e));
+      }
+    } catch (e) {
+      console.log("Audio exception:", e);
+    }
     
     const imageSrc = webcamRef.current.getScreenshot();
     setCapturedImage(imageSrc);
