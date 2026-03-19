@@ -25,7 +25,6 @@ const Captura = () => {
   const [isUploading, setIsUploading] = useState(false);
   
   const webcamRef = useRef(null);
-  const audioRef = useRef(new Audio('/click-sound.mp3')); // Simulando áudio
 
   // Helpers
   const startCamera = () => {
@@ -53,15 +52,6 @@ const Captura = () => {
   };
 
   const capturePhoto = useCallback(() => {
-    // Tenta tocar o som de click de forma segura para não travar
-    try {
-      if (audioRef.current) {
-        audioRef.current.play().catch(e => console.log("Audio play prevented or file not found:", e));
-      }
-    } catch (e) {
-      console.log("Audio exception:", e);
-    }
-    
     const imageSrc = webcamRef.current.getScreenshot();
     setCapturedImage(imageSrc);
     setStep(STEPS.REVIEW);
@@ -119,12 +109,12 @@ const Captura = () => {
           ctx.shadowBlur = 10;
           ctx.fillText('PHOTO OPP', canvas.width / 2, canvas.height - 100);
 
-          resolve(canvas.toDataURL('image/jpeg', 0.7));
+          resolve(canvas.toDataURL('image/jpeg', 0.6));
         };
         
         logoImg.onerror = () => {
            // Fallback se a logo falhar
-           resolve(canvas.toDataURL('image/jpeg', 0.7));
+           resolve(canvas.toDataURL('image/jpeg', 0.6));
         }
       };
     });
