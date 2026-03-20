@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
-import { createAdminAccount } from '../utils/seedAdmin';
 
 // Import assets
 import logoNexLab from '../assets/nexlab-logo.svg';
@@ -125,15 +124,6 @@ const Login = () => {
               className={`w-full mt-24 h-[56px] ${loading ? 'bg-gray-400' : 'bg-[#6A6A6A] hover:bg-gray-600'} text-white font-bold text-lg transition-all shadow-[0_4px_4px_rgba(0,0,0,0.25)] active:scale-95 flex items-center justify-center`}
             >
               {loading ? 'Entrando...' : 'Entrar'}
-            </button>
-
-            {/* Botão temporário para criar admin (remover após usar) */}
-            <button
-              type="button"
-              onClick={createAdminAccount}
-              className="mt-4 text-[10px] text-gray-400 underline w-full text-center"
-            >
-              [Dev] Criar Conta Admin
             </button>
           </form>
         </div>
