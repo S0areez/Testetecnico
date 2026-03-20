@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
+import { logEvent } from '../utils/logger';
 
 // Import assets
 import logoNexLab from '../assets/nexlab-logo.svg';
@@ -31,6 +32,17 @@ const Login = () => {
 
       if (userDoc.exists()) {
         const userData = userDoc.data();
+        
+        // LOG: Login com sucesso
+        await logEvent({
+          action: 'LOGIN_SUCCESS',
+          route: '/login',
+          payload: { email },
+          status: 200,
+          userId: user.uid,
+          role: userData.role
+        });
+
         if (userData.role === 'admin') {
           navigate('/admin');
         } else if (userData.role === 'promoter') {
@@ -39,15 +51,46 @@ const Login = () => {
           setError('Papel de usuário não definido.');
         }
       } else {
+        // LOG: Usuário não encontrado (erro de permissão/configuração)
+        await logEvent({
+          action: 'LOGIN_ERROR_NO_USER_DOC',
+          route: '/login',
+          payload: { email },
+          status: 404,
+          userId: user.uid
+        });
         setError('Usuário não encontrado no banco de dados.');
       }
     } catch (err) {
       console.error("Login error:", err);
-      if (err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
-        setError('Email ou senha incorretos.');
-      } else {
-        setError('Erro ao realizar login. Tente novamente.');
+      
+      let action = 'LOGIN_ERROR_UNKNOWN';
+      let status = 500;
+      let errorMsg = 'Erro ao realizar login. Tente novamente.';
+
+      if (err.code === 'auth/wrong-password') {
+        action = 'LOGIN_ERROR_WRONG_PASSWORD';
+        status = 401;
+        errorMsg = 'Senha incorreta.';
+      } else if (err.code === 'auth/user-not-found') {
+        action = 'LOGIN_ERROR_WRONG_EMAIL';
+        status = 404;
+        errorMsg = 'Email incorreto.';
+      } else if (err.code === 'auth/invalid-email') {
+        action = 'LOGIN_ERROR_INVALID_EMAIL';
+        status = 400;
+        errorMsg = 'Email inválido.';
       }
+
+      // LOG: Erro de Login
+      await logEvent({
+        action,
+        route: '/login',
+        payload: { email }, // Senha NUNCA vai no log
+        status
+      });
+
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -95,20 +138,6 @@ const Login = () => {
               <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
                 <img src={iconLock} alt="Senha" className="w-[14px] h-[18px]" />
               </div>
-            </div>
-
-            {/* Lembrar e Esqueci a Senha */}
-            <div className="flex items-center justify-between w-full mt-2">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <div className="w-[16px] h-[16px] border border-gray-400 flex items-center justify-center bg-white rounded-sm">
-                  <input type="checkbox" className="opacity-0 absolute w-0 h-0" />
-                  <div className="w-2 h-2 bg-gray-600 hidden"></div> {/* Custom checkbox if needed */}
-                </div>
-                <span className="text-[#6A6A6A] text-[10px] md:text-xs font-semibold">Lembrar</span>
-              </label>
-              <button type="button" className="text-[#6A6A6A] text-[10px] md:text-xs font-semibold hover:text-gray-800 transition-colors">
-                Esqueci minha senha
-              </button>
             </div>
 
             {/* Mensagem de Erro */}

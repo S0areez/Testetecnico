@@ -1,7 +1,8 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { collection, addDoc } from "firebase/firestore";
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
+import { logEvent } from '../utils/logger';
 
 // Assets
 import logoNexLab from '../assets/nexlab-logo.svg';
@@ -215,6 +216,16 @@ const Captura = () => {
       setPhotoUrl(finalBase64Image);
       setDocId(docRef.id);
 
+      // LOG: Foto salva com sucesso
+      await logEvent({
+        action: 'PHOTO_CAPTURE_SUCCESS',
+        route: '/ativacao',
+        payload: { docId: docRef.id },
+        status: 200,
+        userId: auth.currentUser?.uid,
+        role: 'promoter'
+      });
+
       // 3. Voltar automaticamente para a tela inicial após 10 segundos
       setTimeout(() => {
         resetFlow();
@@ -222,6 +233,17 @@ const Captura = () => {
 
     } catch (error) {
       console.error("Erro ao fazer upload da foto: ", error);
+
+      // LOG: Erro ao salvar foto
+      await logEvent({
+        action: 'PHOTO_CAPTURE_ERROR',
+        route: '/ativacao',
+        payload: { error: error.message },
+        status: 500,
+        userId: auth.currentUser?.uid,
+        role: 'promoter'
+      });
+
       alert("Erro ao salvar a foto. Tente novamente.");
     } finally {
       setIsUploading(false);
