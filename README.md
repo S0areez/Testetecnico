@@ -1,16 +1,48 @@
-# React + Vite
+NEX.lab - Sistema de Ativação de Marketing
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Projeto de captura de fotos com moldura personalizada e geração de QR Code, focado em alta fidelidade visual e controle de acesso baseado em funções (RBAC).
+🚀 Links do Projeto
 
-Currently, two official plugins are available:
+    Deploy (Vercel): https://testetecnico-two.vercel.app
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+    Repositório: [Link do seu GitHub aqui]
 
-## React Compiler
+🛠️ Tecnologias Utilizadas
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+    Frontend: React.js + Tailwind CSS
 
-## Expanding the ESLint configuration
+    Backend/BaaS: Firebase (Auth, Firestore, Storage)
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+    Hospedagem: Vercel
+
+🔑 Credenciais para Teste (RBAC)
+
+O sistema redireciona o usuário automaticamente conforme o cargo (role) cadastrado no Firestore.
+Perfil	E-mail	Senha	Acesso
+Administrador	admin@email.com	123456	Dashboard de Métricas
+Promotor	promotor@email.com	123456	Tela de Captura (Moldura)
+⚙️ Como Rodar Localmente
+1. Requisitos
+
+    Node.js instalado (v18+)
+
+    Gerenciador de pacotes (NPM ou Yarn)
+
+2. Instalação
+
+git clone https://github.com/S0areez/Testetecnico.git
+cd Testetecnico
+npm install
+
+3. Variáveis de Ambiente
+
+O projeto utiliza Firebase. Para rodar localmente, você deve:
+
+    Renomear o arquivo .env.example para .env.local.
+
+    Preencher com as suas credenciais do Firebase Console.
+
+4. Execução
+Bash
+
+npm run dev
