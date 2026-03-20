@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../firebase';
+import { createAdminAccount } from '../utils/seedAdmin';
 
 // Import assets
 import logoNexLab from '../assets/nexlab-logo.svg';
@@ -11,41 +15,42 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
-    // Simulated login validation
-    if (password !== '123456') {
-      const errorMsg = 'Senha incorreta. Tente novamente.';
-      setError(errorMsg);
-      
-      // Simulate backend log
-      console.log(JSON.stringify({
-        ip: '192.168.0.1', // mock IP
-        route: '/login',
-        status: 401,
-        message: errorMsg,
-        timestamp: new Date().toISOString()
-      }, null, 2));
-      return;
-    }
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
 
-    if (email.toLowerCase().includes('admin')) {
-      navigate('/admin/dashboard');
-    } else if (email.toLowerCase().includes('promotor')) {
-      navigate('/captura');
-    } else {
-      const errorMsg = 'Usuário não reconhecido ou sem permissão.';
-      setError(errorMsg);
-      console.log(JSON.stringify({
-        ip: '192.168.0.1',
-        route: '/login',
-        status: 401,
-        message: errorMsg,
-        timestamp: new Date().toISOString()
-      }, null, 2));
+      // Buscar a role do usuário no Firestore
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userDocRef);
+
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        if (userData.role === 'admin') {
+          navigate('/admin');
+        } else if (userData.role === 'promoter') {
+          navigate('/ativacao');
+        } else {
+          setError('Papel de usuário não definido.');
+        }
+      } else {
+        setError('Usuário não encontrado no banco de dados.');
+      }
+    } catch (err) {
+      console.error("Login error:", err);
+      if (err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
+        setError('Email ou senha incorretos.');
+      } else {
+        setError('Erro ao realizar login. Tente novamente.');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -116,9 +121,19 @@ const Login = () => {
             {/* Botão Entrar */}
             <button
               type="submit"
-              className="w-full mt-24 h-[56px] bg-[#6A6A6A] hover:bg-gray-600 text-white font-bold text-lg transition-all shadow-[0_4px_4px_rgba(0,0,0,0.25)] active:scale-95 flex items-center justify-center"
+              disabled={loading}
+              className={`w-full mt-24 h-[56px] ${loading ? 'bg-gray-400' : 'bg-[#6A6A6A] hover:bg-gray-600'} text-white font-bold text-lg transition-all shadow-[0_4px_4px_rgba(0,0,0,0.25)] active:scale-95 flex items-center justify-center`}
             >
-              Entrar
+              {loading ? 'Entrando...' : 'Entrar'}
+            </button>
+
+            {/* Botão temporário para criar admin (remover após usar) */}
+            <button
+              type="button"
+              onClick={createAdminAccount}
+              className="mt-4 text-[10px] text-gray-400 underline w-full text-center"
+            >
+              [Dev] Criar Conta Admin
             </button>
           </form>
         </div>
