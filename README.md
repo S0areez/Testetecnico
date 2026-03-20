@@ -5,7 +5,7 @@ Projeto de captura de fotos com moldura personalizada e geração de QR Code, fo
 
     Deploy (Vercel): https://testetecnico-two.vercel.app
 
-    Repositório: [Link do seu GitHub aqui]
+    Repositório: https://github.com/S0areez/Testetecnico
 
 🛠️ Tecnologias Utilizadas
 
