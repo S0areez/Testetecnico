@@ -1,14 +1,10 @@
-import React, { useState, useRef, useCallback } from 'react';
-import Webcam from 'react-webcam';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { collection, addDoc } from "firebase/firestore";
 import { db } from '../firebase';
 
 // Assets
 import logoNexLab from '../assets/nexlab-logo.svg';
-import frame4Asset from '../assets/frame-4.svg';
-import buttonAsset from '../assets/button.svg';
-import molduraNova from '../assets/moldura-nova.svg';
 import backgroundFrame from '../assets/background-frame.svg';
 
 const STEPS = {
@@ -28,15 +24,66 @@ const Captura = () => {
   const [docId, setDocId] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   
-  const webcamRef = useRef(null);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const streamRef = useRef(null);
+
+  // Limpar a câmera ao desmontar o componente
+  useEffect(() => {
+    return () => stopCamera();
+  }, []);
+
+  // Efeito para vincular o stream ao elemento de vídeo assim que ele for renderizado
+  useEffect(() => {
+    if (step === STEPS.CAMERA && streamRef.current && videoRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+    }
+  }, [step]);
 
   // Helpers
-  const startCamera = () => {
+  const startCamera = async () => {
     setStep(STEPS.LOADING);
-    // Simula tempo de carregamento da câmera
-    setTimeout(() => {
+    try {
+      // Configuração para garantir máxima nitidez e aspecto 9:16
+      const constraints = {
+        video: {
+          facingMode: "user",
+          width: { ideal: 1080 },
+          height: { ideal: 1920 },
+          aspectRatio: { ideal: 9/16 }
+        },
+        audio: false
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      streamRef.current = stream;
+      
+      // Muda o step para CAMERA. O useEffect acima cuidará de vincular o stream ao vídeo.
       setStep(STEPS.CAMERA);
-    }, 1500);
+      
+    } catch (err) {
+      console.error("Erro ao acessar a câmera:", err);
+      // Fallback para constraints menos rígidas caso a primeira falhe
+      try {
+        const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        streamRef.current = fallbackStream;
+        setStep(STEPS.CAMERA);
+      } catch (fallbackErr) {
+        console.error("Erro no fallback da câmera:", fallbackErr);
+        alert("Erro ao acessar a câmera. Verifique as permissões.");
+        setStep(STEPS.START);
+      }
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
   };
 
   const startCountdown = () => {
@@ -56,10 +103,29 @@ const Captura = () => {
   };
 
   const capturePhoto = useCallback(() => {
-    const imageSrc = webcamRef.current.getScreenshot();
-    setCapturedImage(imageSrc);
-    setStep(STEPS.REVIEW);
-  }, [webcamRef]);
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      
+      // Definir resolução do canvas para captura de alta qualidade
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      
+      const ctx = canvas.getContext('2d');
+      
+      // Desenhar o frame atual do vídeo (espelhado se estiver usando a câmera frontal)
+      ctx.save();
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      ctx.restore();
+
+      const imageSrc = canvas.toDataURL('image/jpeg', 0.9);
+      setCapturedImage(imageSrc);
+      stopCamera();
+      setStep(STEPS.REVIEW);
+    }
+  }, [videoRef, canvasRef]);
 
   const approvePhoto = async () => {
     setStep(STEPS.RESULT);
@@ -164,10 +230,11 @@ const Captura = () => {
 
   const retakePhoto = () => {
     setCapturedImage(null);
-    setStep(STEPS.CAMERA);
+    startCamera();
   };
 
   const resetFlow = () => {
+    stopCamera();
     setCapturedImage(null);
     setPhotoUrl(null);
     setDocId(null);
@@ -195,18 +262,14 @@ const Captura = () => {
 
   const renderLoading = () => (
     <div className="flex flex-col items-center justify-center w-full h-full relative z-10">
-      {/* Ícone de Loading animado (Spinner) */}
-      <svg className="animate-spin h-16 w-16 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-      </svg>
+      <div className="animate-spin h-16 w-16 border-4 border-[#475569] border-t-transparent rounded-full mb-4"></div>
+      <p className="text-[#475569] font-medium tracking-widest uppercase text-sm">Iniciando câmera...</p>
     </div>
   );
 
   const renderCamera = () => (
     <div className="relative w-full h-full flex flex-col items-center justify-center">
-      {/* Moldura Principal (Subtract.svg) */}
-      <div className="relative w-full max-w-[420px] aspect-[9/16] shadow-2xl overflow-hidden">
+      <div className="relative w-full max-w-[420px] aspect-[9/16] shadow-2xl overflow-hidden rounded-xl bg-white">
         {/* Background Frame (Subtract.svg) */}
         <img 
           src={backgroundFrame} 
@@ -214,16 +277,17 @@ const Captura = () => {
           className="absolute inset-0 w-full h-full object-cover z-20 pointer-events-none" 
         />
 
-        {/* Câmera no centro (atrás do Subtract.svg) */}
-        <div className="absolute inset-0 bg-black">
-          <Webcam
-            audio={false}
-            ref={webcamRef}
-            screenshotFormat="image/jpeg"
-            videoConstraints={{ facingMode: "user", aspectRatio: 9/16 }}
-            className="absolute inset-0 w-full h-full object-cover"
-            mirrored={true}
+        {/* Native Video Element */}
+        <div className="absolute inset-0 bg-black overflow-hidden">
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="absolute inset-0 w-full h-full object-cover scale-x-[-1]"
           />
+          {/* Canvas oculto para captura */}
+          <canvas ref={canvasRef} className="hidden" />
         </div>
 
         {/* Conteúdo Adicional da Moldura (Logo e Textos) */}
@@ -254,7 +318,7 @@ const Captura = () => {
           )}
           
           {step === STEPS.COUNTDOWN && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm">
+            <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm z-50">
               <span className="text-8xl font-black text-white animate-pulse">
                 {countdown}
               </span>
@@ -267,7 +331,6 @@ const Captura = () => {
 
   const renderReview = () => (
     <div className="flex flex-col items-center justify-center h-full">
-      {/* Moldura Principal (Subtract.svg) */}
       <div className="relative w-full max-w-[420px] aspect-[9/16] shadow-xl overflow-hidden rounded-xl border border-slate-200 bg-white">
         {/* Background Frame (Subtract.svg) */}
         <img 
@@ -297,22 +360,20 @@ const Captura = () => {
         </div>
       </div>
 
-      {/* Botões de Ação (Abaixo da Moldura) */}
-      <div className="flex items-center justify-center gap-4 mt-8 w-full max-w-[420px] mx-auto">
-        {/* Botão Refazer */}
+      {/* Botões de Ação */}
+      <div className="flex items-center justify-center gap-4 mt-8 w-full max-w-[420px] mx-auto px-4">
         <button
           onClick={retakePhoto}
-          className="flex-1 bg-slate-50 text-[#475569] font-bold text-sm py-4 px-6 rounded-lg border-2 border-[#475569] hover:bg-slate-100 transition-colors"
+          className="flex-1 bg-slate-100 text-[#475569] font-bold text-sm py-4 px-6 rounded-lg border-2 border-[#475569] hover:bg-slate-200 transition-colors uppercase tracking-widest"
         >
-          REFAZER
+          Refazer
         </button>
 
-        {/* Botão Continuar */}
         <button
           onClick={approvePhoto}
-          className="flex-1 bg-[#475569] text-white font-bold text-sm py-4 px-6 rounded-lg hover:bg-slate-700 transition-colors border-2 border-transparent"
+          className="flex-1 bg-[#475569] text-white font-bold text-sm py-4 px-6 rounded-lg hover:bg-slate-800 transition-colors border-2 border-transparent uppercase tracking-widest"
         >
-          CONTINUAR
+          Continuar
         </button>
       </div>
     </div>
@@ -320,7 +381,6 @@ const Captura = () => {
 
   const renderResult = () => (
     <div className="relative w-full h-full flex flex-col items-center justify-center p-4">
-      {/* Moldura Principal (Subtract.svg) */}
       <div className="relative w-full max-w-[420px] aspect-[9/16] shadow-xl overflow-hidden rounded-xl border border-slate-200 bg-white">
         {/* Background Frame (Subtract.svg) */}
         <img 
@@ -335,19 +395,18 @@ const Captura = () => {
           <span className="text-slate-900 font-mono text-[10px]">we make tech simple_</span>
         </div>
 
-        {/* Área da Foto com QR Code no Canto */}
+        {/* Área da Foto com QR Code */}
         <div className="absolute inset-0 bg-white overflow-hidden">
-           {/* A foto ocupa toda a área central */}
            <img 
             src={capturedImage} 
             alt="Captura" 
             className="absolute inset-0 w-full h-full object-cover"
           />
 
-          {/* QR Code Card - Posicionado no canto inferior direito da área da foto */}
-          <div className="absolute bottom-[8%] right-6 z-40 bg-slate-50/90 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 flex flex-col items-center transform scale-90 origin-bottom-right">
+          {/* QR Code Card */}
+          <div className="absolute bottom-[8%] right-6 z-40 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-100 flex flex-col items-center transform scale-90 origin-bottom-right animate-in slide-in-from-bottom-4 duration-500">
             <span className="text-slate-700 font-bold text-[10px] mb-2 uppercase tracking-tight">Fazer download</span>
-            <div className="bg-white p-2 rounded-lg shadow-inner border border-slate-100">
+            <div className="bg-white p-2 rounded-lg shadow-inner border border-slate-50">
               <QRCodeSVG 
                 value={`${window.location.origin}/download/${docId}`} 
                 size={120}
@@ -363,13 +422,13 @@ const Captura = () => {
           <span className="text-slate-900 font-mono text-[10px]">we make tech simple_</span>
         </div>
 
-        {/* Modal Obrigado (Figma image_8 middle) */}
+        {/* Modal Obrigado */}
         {!isUploading && photoUrl && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-[2px] px-6">
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px] px-6">
             <div className="bg-white p-8 rounded-2xl shadow-2xl text-center max-w-[280px] border border-slate-100 animate-in zoom-in duration-300">
               <h2 className="text-2xl font-bold text-slate-800 mb-2">Obrigado!</h2>
               <p className="text-slate-500 text-sm leading-relaxed mb-6">
-                Lorem ipsum dolor sit amet consectetur.
+                Sua foto foi salva com sucesso. Use o QR Code para baixar.
               </p>
               <button 
                 onClick={() => setPhotoUrl(null)} 
@@ -382,11 +441,11 @@ const Captura = () => {
         )}
       </div>
 
-      {/* Botão Finalizar - Abaixo da Moldura */}
-      <div className="mt-8 w-full max-w-[420px]">
+      {/* Botão Finalizar */}
+      <div className="mt-8 w-full max-w-[420px] px-4">
         <button 
           onClick={resetFlow}
-          className="w-full py-5 bg-[#475569] hover:bg-slate-700 text-white font-bold rounded-lg transition-all active:scale-95 shadow-md uppercase tracking-[0.2em] text-sm"
+          className="w-full py-5 bg-[#475569] hover:bg-slate-800 text-white font-bold rounded-lg transition-all active:scale-95 shadow-md uppercase tracking-[0.2em] text-sm"
         >
           Finalizar
         </button>
@@ -394,7 +453,7 @@ const Captura = () => {
 
       {/* Loading Overlay */}
       {isUploading && (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white/90 backdrop-blur-md">
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white/95 backdrop-blur-md">
           <div className="animate-spin h-12 w-12 border-4 border-[#475569] border-t-transparent rounded-full mb-4"></div>
           <h2 className="text-xl font-bold text-slate-900 tracking-widest uppercase">Salvando...</h2>
         </div>
