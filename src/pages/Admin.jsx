@@ -1,19 +1,24 @@
+/**
+ * @component Admin
+ * @description Painel administrativo para gestão de capturas e auditoria de logs.
+ */
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
-import { db } from '../firebase';
-import { QRCodeSVG } from 'qrcode.react';
-import logoNexLab from '../assets/nexlab-logo.svg';
 import { useNavigate } from 'react-router-dom';
 
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { QRCodeSVG } from 'qrcode.react';
+
+import { db } from '../firebase';
+import logoNexLab from '../assets/nexlab-logo.svg';
+
 const Admin = () => {
-  const [activeTab, setActiveTab] = useState('fotos'); // 'fotos' ou 'logs'
+  const [activeTab, setActiveTab] = useState('fotos');
   const [capturas, setCapturas] = useState([]);
   const [logs, setLogs] = useState([]);
   const [filteredCapturas, setFilteredCapturas] = useState([]);
   const [filteredLogs, setFilteredLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // Filtros
   const [dateFilter, setDateFilter] = useState('');
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
@@ -21,19 +26,16 @@ const Admin = () => {
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const navigate = useNavigate();
 
-  // Buscar dados do Firestore
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Buscar Capturas
         const qCapturas = query(collection(db, "capturas"), orderBy("data_hora", "desc"));
         const snapCapturas = await getDocs(qCapturas);
         const dataCapturas = snapCapturas.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setCapturas(dataCapturas);
         setFilteredCapturas(dataCapturas);
 
-        // Buscar Logs
         const qLogs = query(collection(db, "logs"), orderBy("timestamp", "desc"));
         const snapLogs = await getDocs(qLogs);
         const dataLogs = snapLogs.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -41,7 +43,7 @@ const Admin = () => {
         setFilteredLogs(dataLogs);
 
       } catch (error) {
-        console.error("Erro ao buscar dados:", error);
+        // Erro silencioso em produção
       } finally {
         setLoading(false);
       }
@@ -50,7 +52,6 @@ const Admin = () => {
     fetchData();
   }, []);
 
-  // Filtros de Capturas e Logs
   useEffect(() => {
     const filterByDate = (item, dateField) => {
       if (!dateFilter) return true;
@@ -60,7 +61,7 @@ const Admin = () => {
 
     setFilteredCapturas(capturas.filter(c => filterByDate(c, 'data_hora')));
     setFilteredLogs(logs.filter(l => filterByDate(l, 'timestamp')));
-    setCurrentPage(1); // Reseta para primeira página ao filtrar
+    setCurrentPage(1);
   }, [dateFilter, capturas, logs]);
 
   const formatDate = (isoString) => {

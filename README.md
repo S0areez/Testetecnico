@@ -1,11 +1,12 @@
 NEX.lab - Sistema de Ativação de Marketing
 
 Projeto de captura de fotos com moldura personalizada e geração de QR Code, focado em alta fidelidade visual e controle de acesso baseado em funções (RBAC).
+
 🚀 Links do Projeto
 
-    Deploy (Vercel): https://testetecnico-two.vercel.app
+Deploy (Vercel): https://testetecnico-two.vercel.app
 
-    Repositório: https://github.com/S0areez/Testetecnico
+Repositório: https://github.com/S0areez/Testetecnico.git
 
 🛠️ Tecnologias Utilizadas
 

@@ -1,11 +1,16 @@
+/**
+ * @component Login
+ * @description Tela de autenticação unificada com redirecionamento baseado em papéis (RBAC).
+ */
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
+
 import { auth, db } from '../firebase';
 import { logEvent } from '../utils/logger';
 
-// Import assets
 import logoNexLab from '../assets/nexlab-logo.svg';
 import iconLetter from '../assets/Letter.svg';
 import iconLock from '../assets/Senha.svg';
@@ -26,14 +31,12 @@ const Login = () => {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Buscar a role do usuário no Firestore
       const userDocRef = doc(db, 'users', user.uid);
       const userDoc = await getDoc(userDocRef);
 
       if (userDoc.exists()) {
         const userData = userDoc.data();
         
-        // LOG: Login com sucesso
         await logEvent({
           action: 'LOGIN_SUCCESS',
           route: '/login',
@@ -51,7 +54,6 @@ const Login = () => {
           setError('Papel de usuário não definido.');
         }
       } else {
-        // LOG: Usuário não encontrado (erro de permissão/configuração)
         await logEvent({
           action: 'LOGIN_ERROR_NO_USER_DOC',
           route: '/login',
@@ -62,8 +64,6 @@ const Login = () => {
         setError('Usuário não encontrado no banco de dados.');
       }
     } catch (err) {
-      console.error("Login error:", err);
-      
       let action = 'LOGIN_ERROR_UNKNOWN';
       let status = 500;
       let errorMsg = 'Erro ao realizar login. Tente novamente.';
@@ -82,11 +82,10 @@ const Login = () => {
         errorMsg = 'Email inválido.';
       }
 
-      // LOG: Erro de Login
       await logEvent({
         action,
         route: '/login',
-        payload: { email }, // Senha NUNCA vai no log
+        payload: { email },
         status
       });
 
@@ -99,18 +98,14 @@ const Login = () => {
   return (
     <div className="flex flex-col items-center min-h-screen w-full bg-gradient-to-b from-white via-white to-gray-400 font-sans relative overflow-x-hidden">
       <div className="w-full max-w-[400px] flex flex-col items-center pt-10 md:pt-20 px-6 md:px-8 h-full">
-        {/* Logo */}
         <div className="mb-8 md:mb-12">
           <img src={logoNexLab} alt="NEX.lab" className="h-[60px] md:h-[90px]" />
         </div>
         
-        {/* Título */}
         <h1 className="text-[32px] md:text-[40px] font-bold text-black mb-6 md:mb-10 tracking-wide text-center">Login</h1>
         
-        {/* Formulário */}
         <div className="w-full flex flex-col items-center">
           <form onSubmit={handleLogin} className="flex flex-col w-full gap-4">
-            {/* Campo de Email */}
             <div className="relative w-full h-[52px]">
               <input
                 type="email"
@@ -125,7 +120,6 @@ const Login = () => {
               </div>
             </div>
 
-            {/* Campo de Senha */}
             <div className="relative w-full h-[52px] mt-2">
               <input
                 type="password"
@@ -140,14 +134,12 @@ const Login = () => {
               </div>
             </div>
 
-            {/* Mensagem de Erro */}
             {error && (
               <p className="text-red-600 text-xs md:text-sm font-medium text-center mt-2 px-2">
                 {error}
               </p>
             )}
 
-            {/* Botão Entrar */}
             <button
               type="submit"
               disabled={loading}
